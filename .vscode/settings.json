@@ -5,6 +5,7 @@
         "native",
         "transition",
         "timer",
-        "Runtime"
+        "Runtime",
+        "audio"
     ]
 }

@@ -51,6 +51,11 @@ local sheetOptions =
     },
 };
 
+local sheetInfo = require("assets.Spritesheet.powerUps_sheet")
+local powerupSheet = graphics.newImageSheet("assets/Spritesheet/powerUps_sheet.png", sheetInfo:getSheet() )
+
+
+
 local objectSheet = graphics.newImageSheet( "assets/gameObjects.png", sheetOptions );
 -- do not play on this channel unless spiecifically asked to
 audio.reserveChannels( 1 )
@@ -61,7 +66,8 @@ local lives = 1;
 local score = 0;
 local died = false;
 
-local asteroidTable = {};
+local asteroidTable = {}
+local powerupTable  = {}
 
 local bg;
 local ship;
@@ -264,6 +270,25 @@ local function setupShip()
     ship:addEventListener( "touch", dragShip );
 end
 
+local function spawnPowerUp()
+
+    local powerup = display.newSprite( powerupSheet , { 
+            frames= {
+                sheetInfo:getFrameIndex("powerupBlue_bolt")
+            }
+        } )
+
+    powerup.x = display.contentCenterX
+    powerup.y = 100
+
+    powerup.myName = "powerUp"
+    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0 } );
+
+    table.insert(powerupTable, powerup);
+    powerup:setLinearVelocity( 0 , 140 );
+
+end
+
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
@@ -288,7 +313,8 @@ function scene:create( event )
     bg.x = display.contentCenterX;
 	bg.y = display.contentCenterY;
 	
-	setupShip()
+    setupShip()
+    spawnPowerUp()
     setupUi()
     
     sound_explotion= audio.loadSound( "assets/audio/explosion.wav" )
