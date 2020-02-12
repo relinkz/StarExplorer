@@ -1,0 +1,16 @@
+| collition Table | ship | asteroid | powerUp |
+| --------------- | ---- | -------- | ------- |
+| powerUp         | yes  | no       | no      |
+| asteroid        | yes  | yes      | no      |
+| ship            | no   | yes      | yes     |
+
+| categoryBits |  1  |  2  |  4  | maskbit |
+| ------------ | --- | --- | --- | ------- |
+| 1            | 0   | x   | x   | (2+4)6  |
+| 2            | x   | x   | 0   | (1+2)3  |
+| 4            | x   | 0   | 0   | 1       |
+
+|    filter    | ship | asteroid | powerUp |
+| ------------ | ---- | -------- | ------- |
+| categoryBits | 1    | 2        | 4       |
+| maskBit      | 6    | 3        | 1       |

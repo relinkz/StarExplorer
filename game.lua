@@ -13,6 +13,13 @@ local physicsEngine = require( "physics" )
 physicsEngine.start()
 physicsEngine.setGravity(0.0, 0,0)
 
+-- collition filters
+-- https://docs.coronalabs.com/guide/physics/collisionDetection/index.html#filtering
+local cf_ship       = { categoryBits=1, maskBits=6 }
+local cf_asteroid   = { categoryBits=2, maskBits=3 }
+local cf_powerup    = { categoryBits=4, maskBits=1 }
+
+
 -- conf sprite sheet
 local sheetOptions =
 {
@@ -106,7 +113,8 @@ local function createAsteroid()
     end
 
     newAsteroid.myName = "asteroid"
-    physicsEngine.addBody( newAsteroid, "dynamic", { radius=40, bounce=0.8 } );
+    
+    physicsEngine.addBody( newAsteroid, "dynamic", { radius=40, bounce=0.8, filter=cf_asteroid } );
     table.insert(asteroidTable, newAsteroid);
 
     local whereFrom = math.random( 3 );
@@ -211,7 +219,7 @@ local function onCollition( event )
     if (event.phase == "began") then
         local obj1 = event.object1;
         local obj2 = event.object2;
-    
+            
         if
         (
             (obj1.myName == "laser" and obj2.myName == "asteroid" ) or
@@ -256,6 +264,17 @@ local function onCollition( event )
             end
         end
 
+        if
+        (
+            (obj1.myName == "ship" and obj2.myName == "powerUp") or
+            (obj1.myName == "powerUp" and obj2.myName == "ship")
+        ) then
+            if( died == false ) then
+                lives = lives + 1
+                livesText.text = "Lives: " .. lives;
+            end
+        end
+
     end
 end
 
@@ -263,7 +282,7 @@ local function setupShip()
     ship = display.newImageRect( mainGroup, objectSheet, 4, 98, 79 );
     ship.x = display.contentCenterX;
     ship.y = display.contentHeight - 100;
-    physicsEngine.addBody (ship, { radius=30, isSensor=true } );
+    physicsEngine.addBody (ship, { radius=30, isSensor=true, filter=cf_ship } );
     ship.myName = "ship";
 
     ship:addEventListener( "tap", fireLaser );
@@ -282,7 +301,7 @@ local function spawnPowerUp()
     powerup.y = 100
 
     powerup.myName = "powerUp"
-    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0 } );
+    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
 
     table.insert(powerupTable, powerup);
     powerup:setLinearVelocity( 0 , 140 );
