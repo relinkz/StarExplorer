@@ -137,6 +137,27 @@ local function createAsteroid()
     newAsteroid:applyTorque( math.random(-6, 6) );
 end
 
+local function spawnPowerUp( event )
+
+    local powerup = display.newSprite( powerupSheet , { 
+            frames= {
+                sheetInfo:getFrameIndex("powerupBlue_bolt")
+            }
+        } )
+
+    local params = event.source.params
+
+    powerup.x = params.posX
+    powerup.y = params.posY
+
+    powerup.myName = "powerUp"
+    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
+
+    table.insert(powerupTable, powerup);
+    powerup:setLinearVelocity( 0 , 140 );
+
+end
+
 local function cleanAsteroids()
     -- start at tablesize #table, end at 1, -1 as i--
     for i = #asteroidTable, 1, -1 do
@@ -151,6 +172,34 @@ local function cleanAsteroids()
             table.remove( asteroidTable, i );
         end
     end
+end
+
+local function cleanPowerups()
+    for i = #powerupTable, 1, -1 do
+        local thisPowerUp = powerupTable[i];
+
+        if ( thisPowerUp.x < -100 or
+            thisPowerUp.x > display.contentWidth + 100 or
+            thisPowerUp.y < -100 or
+            thisPowerUp.y > display.contentHeight + 100 )
+        then
+            display.remove( thisPowerUp );
+            table.remove( powerupTable, i );
+        end
+    end
+end
+
+local function removePowerUp(powerUp)
+    for i = #powerupTable, 1, -1 do
+        local thisPowerUp = powerupTable[i]
+        if (powerUp == thisPowerUp ) then
+            display.remove(thisPowerUp)
+            table.remove(powerupTable, i)
+        break
+        end
+    end
+
+
 end
 
 local function fireLaser()
@@ -190,10 +239,11 @@ local function dragShip( event )
 end
 
 local function gameloop()
-    -- gameloop
-    updateUiText();
-    createAsteroid();
-    cleanAsteroids();
+    updateUiText()
+    createAsteroid()
+
+    cleanAsteroids()
+    cleanPowerups()
 end
 
 local function restoreShip()
@@ -214,6 +264,7 @@ local function endgame()
     composer.setVariable( "finalScore", score )
     composer.gotoScene( "highscores", { time=800, effect="crossFade" } )
 end
+
 
 local function onCollition( event )
     if (event.phase == "began") then
@@ -240,6 +291,14 @@ local function onCollition( event )
 
             score = score + 100;
             scoreText.text = "Score: " .. score;
+
+            local tm = timer.performWithDelay(50, spawnPowerUp )
+            tm.params = {posX = obj1.x , posY = obj1.y }
+
+            --if (math.random(10) == 10 ) then
+                --local collisionPos = { event.x, event.y }
+              --  timer.performWithDelay(500, spawnPowerUp, collisionPos )
+            --end
         end
         if
         (
@@ -266,13 +325,11 @@ local function onCollition( event )
 
         if
         (
-            (obj1.myName == "ship" and obj2.myName == "powerUp") or
-            (obj1.myName == "powerUp" and obj2.myName == "ship")
+            (obj1.myName == "ship" and obj2.myName == "powerUp")
         ) then
-            if( died == false ) then
-                lives = lives + 1
-                livesText.text = "Lives: " .. lives;
-            end
+            removePowerUp(obj2)
+        elseif (obj1.myName == "powerUp" and obj2.myName == "ship") then
+            removePowerUp(obj1)
         end
 
     end
@@ -287,25 +344,6 @@ local function setupShip()
 
     ship:addEventListener( "tap", fireLaser );
     ship:addEventListener( "touch", dragShip );
-end
-
-local function spawnPowerUp()
-
-    local powerup = display.newSprite( powerupSheet , { 
-            frames= {
-                sheetInfo:getFrameIndex("powerupBlue_bolt")
-            }
-        } )
-
-    powerup.x = display.contentCenterX
-    powerup.y = 100
-
-    powerup.myName = "powerUp"
-    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
-
-    table.insert(powerupTable, powerup);
-    powerup:setLinearVelocity( 0 , 140 );
-
 end
 
 -- -----------------------------------------------------------------------------------
@@ -333,7 +371,6 @@ function scene:create( event )
 	bg.y = display.contentCenterY;
 	
     setupShip()
-    spawnPowerUp()
     setupUi()
     
     sound_explotion= audio.loadSound( "assets/audio/explosion.wav" )
