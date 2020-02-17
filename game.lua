@@ -58,15 +58,19 @@ local sheetOptions =
     },
 };
 
-local sheetInfo = require("assets.Spritesheet.powerUps_sheet")
-local powerupSheet = graphics.newImageSheet("assets/Spritesheet/powerUps_sheet.png", sheetInfo:getSheet() )
+local powerupInfo = require("assets.Spritesheet.powerUps_sheet")
+local powerupSheet = graphics.newImageSheet("assets/Spritesheet/powerUps_sheet.png", powerupInfo:getSheet() )
 
-
+local laserInfo = require("assets.Spritesheet.bullets_sheet")
+local laserSheet = graphics.newImageSheet("assets/Spritesheet/bullets_sheet.png", laserInfo:getSheet() )
 
 local objectSheet = graphics.newImageSheet( "assets/gameObjects.png", sheetOptions );
 -- do not play on this channel unless spiecifically asked to
 audio.reserveChannels( 1 )
 audio.setVolume( 0.2, { channel=1 })
+
+local playerLaserSplit = {}
+local playerLaserPen = {}
 
 
 local lives = 1;
@@ -141,7 +145,7 @@ local function spawnPowerUp( event )
 
     local powerup = display.newSprite( powerupSheet , { 
             frames= {
-                sheetInfo:getFrameIndex("powerupBlue_bolt")
+                powerupInfo:getFrameIndex("powerupBlue_bolt")
             }
         } )
 
@@ -150,7 +154,7 @@ local function spawnPowerUp( event )
     powerup.x = params.posX
     powerup.y = params.posY
 
-    powerup.myName = "powerUp"
+    powerup.myName = "powerUp_split"
     physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
 
     table.insert(powerupTable, powerup);
@@ -202,11 +206,13 @@ local function removePowerUp(powerUp)
 
 end
 
-local function fireLaser()
+local function addLaser( xOffset )
+    local newLaser = display.newSprite( mainGroup, laserSheet, {
+        frames = {
+            laserInfo:getFrameIndex("laserBlue01")
+        }
+    } );
 
-    audio.play( sound_fireSound )
-
-    local newLaser = display.newImageRect( mainGroup, objectSheet, 5, 14, 40 );
     physicsEngine.addBody( newLaser, "dynamic", { isSensor=true } );
     newLaser.isBullet = true;
     newLaser.myName = "laser";
@@ -215,8 +221,25 @@ local function fireLaser()
     newLaser.y = ship.y;
     newLaser:toBack();  -- move it to the back of the layer maingroup
 
-    transition.to( newLaser, { y=-40, time=500, 
-        onComplete = function() display.remove( newLaser ) end } )
+    if xOffset == 0 then
+        transition.to( newLaser, { y=-40, time=500, 
+            onComplete = function() display.remove( newLaser ) end } )
+    else
+        transition.to( newLaser, { y=-40, x = xOffset, time=500, 
+            onComplete = function() display.remove( newLaser ) end } )
+    end
+end
+
+local function fireLaser()
+
+    audio.play( sound_fireSound )
+    addLaser(0)
+
+    for i = 1, #playerLaserSplit, 1 do
+            addLaser(ship.x - (100 * i))
+            addLaser(ship.x + (100 * i))
+    end
+
 end
 
 local function dragShip( event )
@@ -325,13 +348,16 @@ local function onCollition( event )
 
         if
         (
-            (obj1.myName == "ship" and obj2.myName == "powerUp")
+            (obj1.myName == "ship" and obj2.myName == "powerUp_split") or
+            (obj1.myName == "powerUp_split" and obj2.myName == "ship")
         ) then
-            removePowerUp(obj2)
-        elseif (obj1.myName == "powerUp" and obj2.myName == "ship") then
-            removePowerUp(obj1)
+            table.insert(playerLaserSplit, 1)
+            if obj1.myName == "powerUp_split" then
+                removePowerUp(obj1)
+            else
+                removePowerUp(obj2)
+            end
         end
-
     end
 end
 
