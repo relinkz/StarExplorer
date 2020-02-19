@@ -69,6 +69,9 @@ local objectSheet = graphics.newImageSheet( "assets/gameObjects.png", sheetOptio
 audio.reserveChannels( 1 )
 audio.setVolume( 0.2, { channel=1 })
 
+local supportedPowerups = {}
+supportedPowerups[1] = "powerUp_split"
+supportedPowerups[2] = "powerUp_pen"
 local playerLaserSplit = {}
 local playerLaserPen = {}
 
@@ -143,9 +146,21 @@ end
 
 local function spawnPowerUp( event )
 
+    local randPowerup = math.random(#supportedPowerups)
+    local powerupSpriteName = "powerupBlue_bolt"
+    local powerupName = "powerUp_split"
+
+    if supportedPowerups[randPowerup] == "powerUp_split" then
+        powerupName = "powerUp_split"
+        powerupSpriteName = "powerupBlue_bolt"
+    else
+        powerupName = "powerUp_pen"
+        powerupSpriteName = "powerupBlue_star"
+    end
+    
     local powerup = display.newSprite( powerupSheet , { 
             frames= {
-                powerupInfo:getFrameIndex("powerupBlue_bolt")
+                powerupInfo:getFrameIndex(powerupSpriteName)
             }
         } )
 
@@ -154,7 +169,7 @@ local function spawnPowerUp( event )
     powerup.x = params.posX
     powerup.y = params.posY
 
-    powerup.myName = "powerUp_split"
+    powerup.myName = powerupName
     physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
 
     table.insert(powerupTable, powerup);
@@ -202,14 +217,12 @@ local function removePowerUp(powerUp)
         break
         end
     end
-
-
 end
 
-local function addLaser( xOffset )
+local function addLaser( xOffset, spriteName )
     local newLaser = display.newSprite( mainGroup, laserSheet, {
         frames = {
-            laserInfo:getFrameIndex("laserBlue01")
+            laserInfo:getFrameIndex(spriteName)
         }
     } );
 
@@ -231,13 +244,20 @@ local function addLaser( xOffset )
 end
 
 local function fireLaser()
+    local basicShot = "laserBlue01"
+    local penShot = "laserGreen01"
 
     audio.play( sound_fireSound )
-    addLaser(0)
+    if #playerLaserPen == 0 then
+        addLaser(0, basicShot)
+    else
+        addLaser(0, penShot)
+    end
+
 
     for i = 1, #playerLaserSplit, 1 do
-            addLaser(ship.x - (100 * i))
-            addLaser(ship.x + (100 * i))
+            addLaser(ship.x - (100 * i), basicShot)
+            addLaser(ship.x + (100 * i), basicShot)
     end
 
 end
@@ -288,6 +308,15 @@ local function endgame()
     composer.gotoScene( "highscores", { time=800, effect="crossFade" } )
 end
 
+local function powerupSplitTimeout()
+    
+    table.remove(playerLaserSplit, 1)
+end
+
+local function powerupPenTimeout()
+    
+    table.remove(playerLaserPen, 1)
+end
 
 local function onCollition( event )
     if (event.phase == "began") then
@@ -352,6 +381,23 @@ local function onCollition( event )
             (obj1.myName == "powerUp_split" and obj2.myName == "ship")
         ) then
             table.insert(playerLaserSplit, 1)
+            timer.performWithDelay(10000, powerupSplitTimeout)
+
+            if obj1.myName == "powerUp_split" then
+                removePowerUp(obj1)
+            else
+                removePowerUp(obj2)
+            end
+        end
+
+        if
+        (
+            (obj1.myName == "ship" and obj2.myName == "powerUp_pen") or
+            (obj1.myName == "powerUp_pen" and obj2.myName == "ship")
+        ) then
+            table.insert(playerLaserPen, 1)
+            timer.performWithDelay(10000, powerupPenTimeout)
+
             if obj1.myName == "powerUp_split" then
                 removePowerUp(obj1)
             else
