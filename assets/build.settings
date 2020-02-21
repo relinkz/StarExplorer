@@ -1,11 +1,14 @@
 settings =
 {
-	orientation =
+	win32 = 
 	{
-		-- Supported values for orientation:
-        -- portrait, portraitUpsideDown, landscapeLeft, landscapeRight
-        
-		default ="portrait",
-		supported = {"portrait"},
+		preferenceStorage = "registry",
+	},
+
+	window = 
+	{
+		defaultMode = "normal",
+		defaultViewWidth  = 1920,
+		defaultViewHeight = 1080,
 	},
 }
