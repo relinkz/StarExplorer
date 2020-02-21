@@ -220,7 +220,7 @@ local function removePowerUp(powerUp)
     end
 end
 
-local function addLaser( xOffset, spriteName )
+local function addLaser( xOffset, spriteName, laserPen )
     local newLaser = display.newSprite( mainGroup, laserSheet, {
         frames = {
             laserInfo:getFrameIndex(spriteName)
@@ -230,6 +230,7 @@ local function addLaser( xOffset, spriteName )
     physicsEngine.addBody( newLaser, "dynamic", { isSensor=true } );
     newLaser.isBullet = true;
     newLaser.myName = "laser";
+    newLaser.hp = laserPen
 
     newLaser.x = ship.x;
     newLaser.y = ship.y;
@@ -250,15 +251,15 @@ local function fireLaser()
 
     audio.play( sound_fireSound )
     if #playerLaserPen == 0 then
-        addLaser(0, basicShot)
+        addLaser(0, basicShot, 0)
     else
-        addLaser(0, penShot)
+        addLaser(0, penShot, #playerLaserPen)
     end
 
 
     for i = 1, #playerLaserSplit, 1 do
-            addLaser(ship.x - (100 * i), basicShot)
-            addLaser(ship.x + (100 * i), basicShot)
+            addLaser(ship.x - (100 * i), basicShot, 0)
+            addLaser(ship.x + (100 * i), basicShot, 0)
     end
 
 end
@@ -319,6 +320,25 @@ local function powerupPenTimeout()
     table.remove(playerLaserPen, 1)
 end
 
+local function removeAsteroid( asteroidObj)
+    display.remove(asteroidObj)
+
+    for i = #asteroidTable, 1, -1 do
+        if asteroidTable[i] == asteroidObj then
+            table.remove( asteroidTable, i )
+            break;
+        end
+    end
+end
+
+local function playerLaserUpdate( laserObj )
+    if laserObj.hp == 0 then
+        display.remove(laserObj)
+    else
+        laserObj.hp = laserObj.hp - 1
+    end
+end
+
 local function onCollition( event )
     if (event.phase == "began") then
         local obj1 = event.object1;
@@ -330,17 +350,15 @@ local function onCollition( event )
             (obj1.myName == "asteroid" and obj2.myName == "laser")
         )then
             -- remove both objects
-            display.remove( obj1 );
-            display.remove( obj2 );
-
-            audio.play( sound_explotion )
-
-            for i = #asteroidTable, 1, -1 do
-                if( asteroidTable[i] == obj1 or asteroidTable[i] == obj2 ) then
-                    table.remove( asteroidTable, i );
-                    break;
-                end
+            if obj1.myName == "asteroid" then
+                removeAsteroid(obj1)
+                playerLaserUpdate(obj2)
+            else
+                removeAsteroid(obj2)
+                playerLaserUpdate(obj1)
             end
+            
+            audio.play( sound_explotion )
 
             score = score + 100;
             scoreText.text = "Score: " .. score;
