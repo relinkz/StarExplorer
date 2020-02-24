@@ -437,6 +437,15 @@ local function setupShip()
     ship:addEventListener( "touch", dragShip );
 end
 
+local function destroyAllPowerups()
+    for i = #powerupTable, 1, -1 do
+        local thisPowerUp = powerupTable[i];
+
+        display.remove( thisPowerUp );
+        table.remove( powerupTable, i );
+    end
+end
+
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
@@ -457,7 +466,7 @@ function scene:create( event )
 	uiGroup   = display.newGroup()  -- Display group for UI objects like the score
 	sceneGroup:insert( uiGroup )
 
-	bg = display.newImageRect( backGroup, "assets/background.png" , 800, 1400 );
+	bg = display.newImageRect( backGroup, "assets/Backgrounds/planet-pixel-art-4k-3p-1920x1080.jpg" , 1920, 1080 );
     bg.x = display.contentCenterX;
 	bg.y = display.contentCenterY;
 	
@@ -510,7 +519,6 @@ function scene:hide( event )
 	end
 end
 
-
 -- destroy()
 function scene:destroy( event )
 
@@ -520,6 +528,8 @@ function scene:destroy( event )
     audio.dispose ( sound_explotion )
     audio.dispose ( sound_fireSound )
     audio.dispose ( sound_musicTrack )
+
+    destroyAllPowerups()
 end
 
 
