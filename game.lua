@@ -264,23 +264,33 @@ local function fireLaser()
 
 end
 
-local function dragShip( event )
-    local ship = event.target;
-    local phase = event.phase;
-
-    if ("began" == phase) then
-        -- set touch focus on the ship
-        display.currentStage:setFocus( ship );
-        ship.touchOffsetX = event.x - ship.x;
-    elseif ( "moved" == phase ) then
-        -- move the ship to the touch new position
-        ship.x = event.x - ship.touchOffsetX;
-    elseif ( "ended" == phase or "cancelled" == phase) then
-        -- release the touch focus on the ship
-        display.currentStage:setFocus(nil);
+-- set the velosity only when key is down
+local function keyPressedPhaseCheck(eventPhase, v)
+    if(eventPhase == "down") then
+        ship:setLinearVelocity(v)
+    end
+    if(eventPhase == "up") then
+        ship:setLinearVelocity(0)
     end
 
-    return true;
+end
+
+local function onKeyEvent( event )
+    if( event.keyName == "a" ) then
+        keyPressedPhaseCheck(event.phase, -100)
+        return true
+    end
+    if( event.keyName == "d" ) then
+        keyPressedPhaseCheck(event.phase, 100)
+        return true
+    end
+    if( event.keyName == "space" and event.phase == "down") then
+        fireLaser()
+        return true
+    end
+    -- if( event.keyName == "s" )
+    -- if( event.keyName == "w" )
+    return false
 end
 
 local function gameloop()
@@ -430,11 +440,8 @@ local function setupShip()
     ship = display.newImageRect( mainGroup, objectSheet, 4, 98, 79 );
     ship.x = display.contentCenterX;
     ship.y = display.contentHeight - 100;
-    physicsEngine.addBody (ship, { radius=30, isSensor=true, filter=cf_ship } );
+    physicsEngine.addBody (ship, "kinematic", { radius=30, isSensor=true, filter=cf_ship } );
     ship.myName = "ship";
-
-    ship:addEventListener( "tap", fireLaser );
-    ship:addEventListener( "touch", dragShip );
 end
 
 local function destroyAllPowerups()
@@ -472,6 +479,8 @@ function scene:create( event )
 	
     setupShip()
     setupUi()
+
+    Runtime:addEventListener("key", onKeyEvent)
     
     sound_explotion= audio.loadSound( "assets/audio/explosion.wav" )
     sound_fireSound= audio.loadSound( "assets/audio/fire.wav" )
