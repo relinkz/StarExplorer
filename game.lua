@@ -57,7 +57,7 @@ local sheetOptions =
             height  = 40
         },
     },
-};
+}
 
 local powerupInfo = require("assets.Spritesheet.powerUps_sheet")
 local powerupSheet = graphics.newImageSheet("assets/Spritesheet/powerUps_sheet.png", powerupInfo:getSheet() )
@@ -65,7 +65,7 @@ local powerupSheet = graphics.newImageSheet("assets/Spritesheet/powerUps_sheet.p
 local laserInfo = require("assets.Spritesheet.bullets_sheet")
 local laserSheet = graphics.newImageSheet("assets/Spritesheet/bullets_sheet.png", laserInfo:getSheet() )
 
-local objectSheet = graphics.newImageSheet( "assets/gameObjects.png", sheetOptions );
+local objectSheet = graphics.newImageSheet( "assets/gameObjects.png", sheetOptions )
 -- do not play on this channel unless spiecifically asked to
 audio.reserveChannels( 1 )
 audio.setVolume( 0.2, { channel=1 })
@@ -77,20 +77,24 @@ local playerLaserSplit = {}
 local playerLaserPen = {}
 
 
-local lives = 1;
-local score = 0;
-local died = false;
+local lives = 1
+local score = 0
+local died = false
 local shipSpeed = 100
 
 local asteroidTable = {}
 local powerupTable  = {}
 
-local bg;
-local ship;
-local gameLoopTimer;
-local livesText;
-local scoreText;
-local debugText;
+local bg
+local ship
+local gameLoopTimer
+local livesText
+local scoreText
+local memText
+local textText
+
+local memUsed
+local texUsed
 
 local backGroup
 local mainGroup
@@ -101,49 +105,59 @@ local sound_fireSound
 local sound_musicTrack
 
 local function setupUi()
-    livesText = display.newText (uiGroup, "Lives: " .. lives, 200, 80, native.systemFont, 36 );
-    scoreText = display.newText (uiGroup, "Score: " .. score, 400, 80, native.systemFont, 36 );
-    --debugText = display.newText (uiGroup, "Debug: ", 200, 140, native.systemFont, 36 );
+    memUsed = 0
+    texUsed = 0
+
+    livesText = display.newText (uiGroup, "Lives: " .. lives, 200, 80, native.systemFont, 36 )
+    scoreText = display.newText (uiGroup, "Score: " .. score, 400, 80, native.systemFont, 36 )
+    memText = display.newText (uiGroup, "memText: " .. memUsed, 400, 140, native.systemFont, 36 )
+    textText = display.newText (uiGroup, "textText: " .. texUsed, 400, 200, native.systemFont, 36 )
 end
 local function updateUiText()
-    livesText.text = "Lives: " .. lives;
-    scoreText.text = "Score: " .. score;
+    -- https://forums.coronalabs.com/topic/22091-guide-findingsolving-memory-leaks/
+    memUsed = (collectgarbage("count") / 1000)
+    texUsed = system.getInfo("textureMemoryUsed") / 1000000
+    
+    livesText.text = "Lives: " .. lives
+    scoreText.text = "Score: " .. score
+    memText.text = "Memory Used: " .. memUsed
+    textText.text = "Texture Memory Used" .. texUsed
 end
 
 local function createAsteroid()
-    local asteroidType = math.random( 3 );
-    local newAsteroid;
+    local asteroidType = math.random( 3 )
+    local newAsteroid
     if (asteroidType == 1) then
-        newAsteroid = display.newImageRect( mainGroup, objectSheet, 1, 102, 85 );
+        newAsteroid = display.newImageRect( mainGroup, objectSheet, 1, 102, 85 )
     elseif( asteroidType == 2) then
-        newAsteroid = display.newImageRect( mainGroup, objectSheet, 2, 90, 83 );
+        newAsteroid = display.newImageRect( mainGroup, objectSheet, 2, 90, 83 )
     else
-        newAsteroid = display.newImageRect( mainGroup, objectSheet, 3, 100, 97 );
+        newAsteroid = display.newImageRect( mainGroup, objectSheet, 3, 100, 97 )
     end
 
     newAsteroid.myName = "asteroid"
     
-    physicsEngine.addBody( newAsteroid, "dynamic", { radius=40, bounce=0.8, filter=cf_asteroid } );
-    table.insert(asteroidTable, newAsteroid);
+    physicsEngine.addBody( newAsteroid, "dynamic", { radius=40, bounce=0.8, filter=cf_asteroid } )
+    table.insert(asteroidTable, newAsteroid)
 
-    local whereFrom = math.random( 3 );
+    local whereFrom = math.random( 3 )
     if (whereFrom == 1) then
         -- from left
-        newAsteroid.x = -60;
-        newAsteroid.y = math.random( 500 );
-        newAsteroid:setLinearVelocity( math.random( 40, 120 ), math.random( 20, 60 ) );
+        newAsteroid.x = -60
+        newAsteroid.y = math.random( 500 )
+        newAsteroid:setLinearVelocity( math.random( 40, 120 ), math.random( 20, 60 ) )
     elseif (whereFrom == 2) then
         -- from top
-        newAsteroid.x = math.random( display.contentWidth );
-        newAsteroid.y = -60;
-        newAsteroid:setLinearVelocity( math.random( -40, 40 ), math.random( 20, 60 ) );
+        newAsteroid.x = math.random( display.contentWidth )
+        newAsteroid.y = -60
+        newAsteroid:setLinearVelocity( math.random( -40, 40 ), math.random( 20, 60 ) )
     elseif (whereFrom == 3) then
         -- from right
-        newAsteroid.x = display.contentWidth + 60;
-        newAsteroid.y = math.random( 500 );
-        newAsteroid:setLinearVelocity( math.random( -120, -40 ), math.random( 20, 60 ) );
+        newAsteroid.x = display.contentWidth + 60
+        newAsteroid.y = math.random( 500 )
+        newAsteroid:setLinearVelocity( math.random( -120, -40 ), math.random( 20, 60 ) )
     end
-    newAsteroid:applyTorque( math.random(-6, 6) );
+    newAsteroid:applyTorque( math.random(-6, 6) )
 end
 
 local function spawnPowerUp( event )
@@ -172,40 +186,40 @@ local function spawnPowerUp( event )
     powerup.y = params.posY
 
     powerup.myName = powerupName
-    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup });
+    physicsEngine.addBody( powerup, "dynamic", { radius=17, bounce=1.0, filter=cf_powerup })
 
-    table.insert(powerupTable, powerup);
-    powerup:setLinearVelocity( 0 , 140 );
+    table.insert(powerupTable, powerup)
+    powerup:setLinearVelocity( 0 , 140 )
 
 end
 
 local function cleanAsteroids()
     -- start at tablesize #table, end at 1, -1 as i--
     for i = #asteroidTable, 1, -1 do
-        local thisAsteroid = asteroidTable[i];
+        local thisAsteroid = asteroidTable[i]
 
         if ( thisAsteroid.x < -100 or
              thisAsteroid.x > display.contentWidth + 100 or
              thisAsteroid.y < -100 or
              thisAsteroid.y > display.contentHeight + 100 )
         then
-            display.remove( thisAsteroid );
-            table.remove( asteroidTable, i );
+            display.remove( thisAsteroid )
+            table.remove( asteroidTable, i )
         end
     end
 end
 
 local function cleanPowerups()
     for i = #powerupTable, 1, -1 do
-        local thisPowerUp = powerupTable[i];
+        local thisPowerUp = powerupTable[i]
 
         if ( thisPowerUp.x < -100 or
             thisPowerUp.x > display.contentWidth + 100 or
             thisPowerUp.y < -100 or
             thisPowerUp.y > display.contentHeight + 100 )
         then
-            display.remove( thisPowerUp );
-            table.remove( powerupTable, i );
+            display.remove( thisPowerUp )
+            table.remove( powerupTable, i )
         end
     end
 end
@@ -226,16 +240,16 @@ local function addLaser( xOffset, spriteName, laserPen )
         frames = {
             laserInfo:getFrameIndex(spriteName)
         }
-    } );
+    } )
 
-    physicsEngine.addBody( newLaser, "dynamic", { isSensor=true } );
-    newLaser.isBullet = true;
-    newLaser.myName = "laser";
+    physicsEngine.addBody( newLaser, "dynamic", { isSensor=true } )
+    newLaser.isBullet = true
+    newLaser.myName = "laser"
     newLaser.hp = laserPen
 
-    newLaser.x = ship.x;
-    newLaser.y = ship.y;
-    newLaser:toBack();  -- move it to the back of the layer maingroup
+    newLaser.x = ship.x
+    newLaser.y = ship.y
+    newLaser:toBack()  -- move it to the back of the layer maingroup
 
     if xOffset == 0 then
         transition.to( newLaser, { y=-40, time=500, 
@@ -286,17 +300,17 @@ local function onKeyEvent( event )
         if (event.keyName == "space") then
             return true  -- do nothing
         end
-        
+
         local vx, vy = ship:getLinearVelocity()
         -- if d pressed down has been registered before up on a: (cauing the ship to stop in rapid keypressing)
         if (event.keyName == "a") and (vx == -shipSpeed) then
             vx = 0
         elseif (event.keyName == "d") and (vx == shipSpeed) then
-            vx = 0;
+            vx = 0
         elseif (event.keyName == "w") and (vy == -shipSpeed) then
-            vy = 0;
+            vy = 0
         elseif (event.keyName == "s") and (vy == shipSpeed) then
-            vy = 0;
+            vy = 0
         end
         ship:setLinearVelocity(vx, vy)
     end
@@ -311,15 +325,15 @@ local function gameloop()
 end
 
 local function restoreShip()
-    ship.isBodyActive = false;
-    ship.x = display.contentCenterX;
-    ship.y = display.contentHeight - 100;
+    ship.isBodyActive = false
+    ship.x = display.contentCenterX
+    ship.y = display.contentHeight - 100
 
     -- fade in the ship
     transition.to (ship, { alpha=1, time=4000, 
         onComplete = function()
-            ship.isBodyActive = true;
-            died = false;
+            ship.isBodyActive = true
+            died = false
         end
     })
 end
@@ -345,7 +359,7 @@ local function removeAsteroid( asteroidObj)
     for i = #asteroidTable, 1, -1 do
         if asteroidTable[i] == asteroidObj then
             table.remove( asteroidTable, i )
-            break;
+            break
         end
     end
 end
@@ -360,8 +374,8 @@ end
 
 local function onCollition( event )
     if (event.phase == "began") then
-        local obj1 = event.object1;
-        local obj2 = event.object2;
+        local obj1 = event.object1
+        local obj2 = event.object2
             
         if
         (
@@ -379,8 +393,8 @@ local function onCollition( event )
             
             audio.play( sound_explotion )
 
-            score = score + 100;
-            scoreText.text = "Score: " .. score;
+            score = score + 100
+            scoreText.text = "Score: " .. score
 
             local tm = timer.performWithDelay(50, spawnPowerUp )
             tm.params = {posX = obj1.x , posY = obj1.y }
@@ -396,9 +410,9 @@ local function onCollition( event )
             (obj1.myName == "asteroid" and obj2.myName == "ship")
         )then
             if (died == false) then
-                died = true;
-                lives = lives - 1;
-                livesText.text = "Lives: " .. lives;
+                died = true
+                lives = lives - 1
+                livesText.text = "Lives: " .. lives
 
                 audio.play( sound_explotion )
             end
@@ -408,8 +422,8 @@ local function onCollition( event )
 				
 				timer.performWithDelay( 2000, endgame )
             else
-                ship.alpha = 0;
-                timer.performWithDelay(1000, restoreShip);
+                ship.alpha = 0
+                timer.performWithDelay(1000, restoreShip)
             end
         end
 
@@ -446,19 +460,19 @@ local function onCollition( event )
 end
 
 local function setupShip()
-    ship = display.newImageRect( mainGroup, objectSheet, 4, 98, 79 );
-    ship.x = display.contentCenterX;
-    ship.y = display.contentHeight - 100;
-    physicsEngine.addBody (ship, "kinematic", { radius=30, isSensor=true, filter=cf_ship } );
-    ship.myName = "ship";
+    ship = display.newImageRect( mainGroup, objectSheet, 4, 98, 79 )
+    ship.x = display.contentCenterX
+    ship.y = display.contentHeight - 100
+    physicsEngine.addBody (ship, "kinematic", { radius=30, isSensor=true, filter=cf_ship } )
+    ship.myName = "ship"
 end
 
 local function destroyAllPowerups()
     for i = #powerupTable, 1, -1 do
-        local thisPowerUp = powerupTable[i];
+        local thisPowerUp = powerupTable[i]
 
-        display.remove( thisPowerUp );
-        table.remove( powerupTable, i );
+        display.remove( thisPowerUp )
+        table.remove( powerupTable, i )
     end
 end
 
@@ -482,9 +496,9 @@ function scene:create( event )
 	uiGroup   = display.newGroup()  -- Display group for UI objects like the score
 	sceneGroup:insert( uiGroup )
 
-	bg = display.newImageRect( backGroup, "assets/Backgrounds/planet-pixel-art-4k-3p-1920x1080.jpg" , 1920, 1080 );
-    bg.x = display.contentCenterX;
-	bg.y = display.contentCenterY;
+	bg = display.newImageRect( backGroup, "assets/Backgrounds/planet-pixel-art-4k-3p-1920x1080.jpg" , 1920, 1080 )
+    bg.x = display.contentCenterX
+	bg.y = display.contentCenterY
 	
     setupShip()
     setupUi()
@@ -508,8 +522,8 @@ function scene:show( event )
 	elseif ( phase == "did" ) then
 		-- Code here runs when the scene is entirely on screen
 		physicsEngine.start()
-		Runtime:addEventListener( "collision", onCollition );
-        gameLoopTimer = timer.performWithDelay( 500, gameloop, 0 );
+		Runtime:addEventListener( "collision", onCollition )
+        gameLoopTimer = timer.performWithDelay( 500, gameloop, 0 )
         
         audio.play( sound_musicTrack, { channel=1, loops=-1 } )
 	end
