@@ -80,6 +80,7 @@ local playerLaserPen = {}
 local lives = 1;
 local score = 0;
 local died = false;
+local shipSpeed = 100
 
 local asteroidTable = {}
 local powerupTable  = {}
@@ -264,33 +265,41 @@ local function fireLaser()
 
 end
 
--- set the velosity only when key is down
-local function keyPressedPhaseCheck(eventPhase, v)
-    if(eventPhase == "down") then
-        ship:setLinearVelocity(v)
-    end
-    if(eventPhase == "up") then
-        ship:setLinearVelocity(0)
-    end
-
-end
-
 local function onKeyEvent( event )
-    if( event.keyName == "a" ) then
-        keyPressedPhaseCheck(event.phase, -100)
-        return true
+    if event.phase == "down" then
+        if event.keyName == "space" then
+            fireLaser()
+            return true -- no need to handle movement
+        end
+        local vx, vy = ship:getLinearVelocity()
+        if event.keyName == "a" then
+            vx = -100
+        elseif event.keyName == "d" then
+            vx = 100
+        elseif event.keyName == "w" then
+            vy = -100
+        elseif event.keyName == "s" then
+            vy = 100
+        end
+        ship:setLinearVelocity(vx, vy)
+    elseif event.phase == "up" then
+        if (event.keyName == "space") then
+            return true  -- do nothing
+        end
+        
+        local vx, vy = ship:getLinearVelocity()
+        -- if d pressed down has been registered before up on a: (cauing the ship to stop in rapid keypressing)
+        if (event.keyName == "a") and (vx == -shipSpeed) then
+            vx = 0
+        elseif (event.keyName == "d") and (vx == shipSpeed) then
+            vx = 0;
+        elseif (event.keyName == "w") and (vy == -shipSpeed) then
+            vy = 0;
+        elseif (event.keyName == "s") and (vy == shipSpeed) then
+            vy = 0;
+        end
+        ship:setLinearVelocity(vx, vy)
     end
-    if( event.keyName == "d" ) then
-        keyPressedPhaseCheck(event.phase, 100)
-        return true
-    end
-    if( event.keyName == "space" and event.phase == "down") then
-        fireLaser()
-        return true
-    end
-    -- if( event.keyName == "s" )
-    -- if( event.keyName == "w" )
-    return false
 end
 
 local function gameloop()
