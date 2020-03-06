@@ -73,14 +73,15 @@ audio.setVolume( 0.2, { channel=1 })
 local supportedPowerups = {}
 supportedPowerups[1] = "powerUp_split"
 supportedPowerups[2] = "powerUp_pen"
+supportedPowerups[3] = "powerUp_speed"
+
 local playerLaserSplit = {}
 local playerLaserPen = {}
-
 
 local lives = 1
 local score = 0
 local died = false
-local shipSpeed = 100
+local shipSpeed = 300
 
 local asteroidTable = {}
 local powerupTable  = {}
@@ -169,6 +170,9 @@ local function spawnPowerUp( event )
     if supportedPowerups[randPowerup] == "powerUp_split" then
         powerupName = "powerUp_split"
         powerupSpriteName = "powerupBlue_bolt"
+    elseif supportedPowerups[randPowerup] == "powerUp_speed" then
+        powerupName = "powerUp_speed"
+        powerupSpriteName = "powerupGreen_star"
     else
         powerupName = "powerUp_pen"
         powerupSpriteName = "powerupBlue_star"
@@ -280,39 +284,41 @@ local function fireLaser()
 end
 
 local function onKeyEvent( event )
-    if event.phase == "down" then
-        if event.keyName == "space" then
-            fireLaser()
-            return true -- no need to handle movement
-        end
-        local vx, vy = ship:getLinearVelocity()
-        if event.keyName == "a" then
-            vx = -100
-        elseif event.keyName == "d" then
-            vx = 100
-        elseif event.keyName == "w" then
-            vy = -100
-        elseif event.keyName == "s" then
-            vy = 100
-        end
-        ship:setLinearVelocity(vx, vy)
-    elseif event.phase == "up" then
-        if (event.keyName == "space") then
-            return true  -- do nothing
-        end
+    if not died then
+        if event.phase == "down" then
+            if event.keyName == "space" then
+                fireLaser()
+                return true -- no need to handle movement
+            end
+            local vx, vy = ship:getLinearVelocity()
+            if event.keyName == "a" then
+                vx = -shipSpeed
+            elseif event.keyName == "d" then
+                vx = shipSpeed
+            elseif event.keyName == "w" then
+                vy = -shipSpeed
+            elseif event.keyName == "s" then
+                vy = shipSpeed
+            end
+            ship:setLinearVelocity(vx, vy)
+        elseif event.phase == "up" then
+            if (event.keyName == "space") then
+                return true  -- do nothing
+            end
 
-        local vx, vy = ship:getLinearVelocity()
-        -- if d pressed down has been registered before up on a: (cauing the ship to stop in rapid keypressing)
-        if (event.keyName == "a") and (vx == -shipSpeed) then
-            vx = 0
-        elseif (event.keyName == "d") and (vx == shipSpeed) then
-            vx = 0
-        elseif (event.keyName == "w") and (vy == -shipSpeed) then
-            vy = 0
-        elseif (event.keyName == "s") and (vy == shipSpeed) then
-            vy = 0
+            local vx, vy = ship:getLinearVelocity()
+            -- if d pressed down has been registered before up on a: (cauing the ship to stop in rapid keypressing)
+            if (event.keyName == "a") and (vx == -shipSpeed) then
+                vx = 0
+            elseif (event.keyName == "d") and (vx == shipSpeed) then
+                vx = 0
+            elseif (event.keyName == "w") and (vy == -shipSpeed) then
+                vy = 0
+            elseif (event.keyName == "s") and (vy == shipSpeed) then
+                vy = 0
+            end
+            ship:setLinearVelocity(vx, vy)
         end
-        ship:setLinearVelocity(vx, vy)
     end
 end
 
@@ -351,6 +357,10 @@ end
 local function powerupPenTimeout()
     
     table.remove(playerLaserPen, 1)
+end
+
+local function powerupSpeedTimeout()
+    shipSpeed = shipSpeed - 100
 end
 
 local function removeAsteroid( asteroidObj)
@@ -451,6 +461,21 @@ local function onCollition( event )
             timer.performWithDelay(10000, powerupPenTimeout)
 
             if obj1.myName == "powerUp_split" then
+                removePowerUp(obj1)
+            else
+                removePowerUp(obj2)
+            end
+        end
+
+        if
+        (
+            (obj1.myName == "ship" and obj2.myName == "powerUp_speed") or
+            (obj1.myName == "powerUp_speed" and obj2.myName == "ship")
+        ) then
+            shipSpeed = shipSpeed + 100
+            timer.performWithDelay(10000, powerupSpeedTimeout)
+
+            if obj1.myName == "powerUp_speed" then
                 removePowerUp(obj1)
             else
                 removePowerUp(obj2)
